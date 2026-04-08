@@ -46,7 +46,7 @@ export const Login = () => {
         {/* ── Logo ── */}
         <div className="lp-logo-wrap">
           <div className="lp-logo-icon"><Gem size={34} strokeWidth={1.5} color="#fff" /></div>
-          <h1 className="lp-brand">AT PLUS ERP</h1>
+          <h1 className="lp-brand">ORDER TO DELIVERY</h1>
           <p className="lp-brand-sub">Handmade Jewellery Unit</p>
         </div>
 
