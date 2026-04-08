@@ -1,0 +1,35 @@
+const fs = require('fs');
+const path = require('path');
+
+const filesToFix = [
+  'src/app/pages/HuidLabel.tsx',
+  'src/app/pages/ReceiptDepartment.tsx',
+  'src/app/pages/ReceivedInStock.tsx'
+];
+
+filesToFix.forEach(file => {
+  const absolutePath = path.resolve(__dirname, file);
+  let content = fs.readFileSync(absolutePath, 'utf8');
+
+  if (file.includes('HuidLabel.tsx')) {
+    // Remove lines between checkbox and orderNumber
+    const regex = /<input type="checkbox"[^>]*checked={row\.checked}[^>]*\/>\s*<\/td>([\s\S]*?)<td[^>]*>{row\.orderNumber}<\/td>/g;
+    content = content.replace(regex, (match, p1) => {
+       return `<input type="checkbox" checked={row.checked} onChange={() => toggleCheck(row.id)} className="w-4 h-4 text-amber-600 rounded cursor-pointer" />\n                      </td>\n                      <td className="px-5 py-3 whitespace-nowrap">{row.orderNumber}</td>`;
+    });
+  } else if (file.includes('ReceiptDepartment.tsx')) {
+    const regex = /<input type="checkbox"[^>]*checked={row\.checked}[^>]*\/>\s*<\/td>([\s\S]*?)<td[^>]*>{row\.orderNumber}<\/td>/g;
+    content = content.replace(regex, (match, p1) => {
+       return `<input type="checkbox" checked={row.checked} onChange={() => toggleCheck(row.id)} className="w-4 h-4 text-amber-600 rounded cursor-pointer" />\n                      </td>\n                      <td className="px-5 py-3 whitespace-nowrap">{row.orderNumber}</td>`;
+    });
+  } else if (file.includes('ReceivedInStock.tsx')) {
+    const regex = /<input type="checkbox"[^>]*checked={row\.checked}[^>]*\/>\s*<\/td>([\s\S]*?)<td[^>]*>{row\.orderNumber}<\/td>/g;
+    content = content.replace(regex, (match, p1) => {
+       return `<input type="checkbox" checked={row.checked} onChange={() => toggleCheck(row.id)} className="w-4 h-4 text-amber-600 rounded cursor-pointer" />\n                      </td>\n                      <td className="px-5 py-3 whitespace-nowrap">{row.orderNumber}</td>`;
+    });
+  }
+
+  fs.writeFileSync(absolutePath, content);
+  console.log(`Fixed ${file}`);
+});
+progress i
