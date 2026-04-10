@@ -78,6 +78,58 @@ export const KarigarReport: React.FC = () => {
   const delayPct   = Math.round((totalDelayOrders  / totalOrders) * 251);
   const onTimePct  = Math.round((totalOnTimeOrders / totalOrders) * 251);
 
+  const handleDownloadExcel = () => {
+    // 1. Prepare Headers and Data for Detail Report
+    const detailHeaders = [
+      "Karigar Name", "Order Number", "Client Name", "Order Stage", "Order Type",
+      "Category Name", "Melting", "Weight", "Order Date", "Karigar Del. Date",
+      "Customer Del. Date", "Expected Del. Date", "Jama Date", "Metal Issue Date",
+      "Ghat Weight", "Total Weight", "Total Qty", "Left Days"
+    ];
+    
+    const detailRows = filteredDetails.map((r: any) => [
+      r.karigar, r.orderNo, r.client, r.stage, r.type,
+      r.category, r.melting, r.weight, r.orderDate, r.karigarDel,
+      r.custDel, r.expDel, r.jama, r.metalIssue,
+      r.ghat, r.total, r.qty, r.leftDays
+    ]);
+
+    // 2. Prepare Headers and Data for Summary
+    const summaryHeaders = [
+      "Karigar Name", "Late", "On Time", "Total", "Late %", 
+      "Ghat Weight", "Customer Weight", "Stock Orders", "Total Weight", "Balance", "Metal Issue"
+    ];
+
+    const summaryRows = filteredSummary.map((r: any) => [
+      r.name, r.late, r.onTime, r.total, r.latePercent,
+      r.ghatWeight, r.custWeight, r.stockOrdr, r.totalWeight, r.balance, r.metalIssue
+    ]);
+
+    // 3. Combine into CSV String
+    let csvContent = "KARIGAR DETAIL REPORT\n";
+    csvContent += detailHeaders.join(",") + "\n";
+    detailRows.forEach(row => {
+      csvContent += row.map((val: any) => `"${val || ""}"`).join(",") + "\n";
+    });
+
+    csvContent += "\n\nKARIGAR SUMMARY\n";
+    csvContent += summaryHeaders.join(",") + "\n";
+    summaryRows.forEach(row => {
+      csvContent += row.map((val: any) => `"${val || ""}"`).join(",") + "\n";
+    });
+
+    // 4. Trigger Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Karigar_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4 pt-1">
       {/* ── Page Title ────────────────────────────────── */}
@@ -101,7 +153,7 @@ export const KarigarReport: React.FC = () => {
             </div>
             <span className="text-[9px] font-black uppercase tracking-widest text-red-800/70">Delay Orders</span>
           </div>
-          <div className="text-3xl font-black text-red-600">{totalDelayOrders.toLocaleString()}</div>
+          <div className="text-2xl font-black text-red-600">{totalDelayOrders.toLocaleString()}</div>
         </div>
 
         {/* On Time Orders */}
@@ -112,7 +164,7 @@ export const KarigarReport: React.FC = () => {
             </div>
             <span className="text-[9px] font-black uppercase tracking-widest text-green-800/70">On Time Orders</span>
           </div>
-          <div className="text-3xl font-black text-green-600">{totalOnTimeOrders.toLocaleString()}</div>
+          <div className="text-2xl font-black text-green-600">{totalOnTimeOrders.toLocaleString()}</div>
         </div>
 
         {/* Total Orders */}
@@ -123,7 +175,7 @@ export const KarigarReport: React.FC = () => {
             </div>
             <span className="text-[9px] font-black uppercase tracking-widest text-amber-800/70">Total Orders</span>
           </div>
-          <div className="text-3xl font-black text-amber-600">{totalOrders.toLocaleString()}</div>
+          <div className="text-2xl font-black text-amber-600">{totalOrders.toLocaleString()}</div>
         </div>
 
         {/* Total Ghat Weight */}
@@ -157,7 +209,10 @@ export const KarigarReport: React.FC = () => {
         <div className="bg-white rounded-xl border-t-4 border-amber-600 shadow-xl overflow-hidden">
           {/* Action buttons row */}
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
-            <button className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg shadow-md uppercase tracking-wider transition-all">
+            <button 
+              onClick={handleDownloadExcel}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg shadow-md uppercase tracking-wider transition-all"
+            >
               Download Excel
             </button>
             <button onClick={handleReset} className="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
@@ -374,7 +429,8 @@ export const KarigarReport: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-amber-100 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse" style={{ minWidth: "1800px" }}>
             <thead>
               <tr className="bg-[#fff7ed] text-[#9a3412] border-b border-amber-200">
@@ -420,6 +476,59 @@ export const KarigarReport: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden p-3 space-y-4 bg-slate-50/50">
+          {filteredDetails.map((row) => (
+            <div key={row.id} className="p-4 bg-white rounded-2xl border border-amber-200 shadow-md border-l-4 border-l-amber-500 space-y-3 transition-transform active:scale-[0.98]">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-black text-[#9a3412] uppercase tracking-wider">{row.karigar}</span>
+                <span className="text-[10px] font-black text-slate-400 tracking-widest">{row.orderNo}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-800">{row.client}</span>
+                <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${row.stage === "Complete" ? "bg-green-50 text-green-700 border border-green-200" : "bg-amber-50 text-amber-700 border border-amber-200"}`}>{row.stage || "N/A"}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase leading-none tracking-widest block">Order Type</span>
+                  <span className="text-[11px] font-bold text-indigo-700 block">{row.type}</span>
+                </div>
+                <div className="space-y-1 text-right">
+                  <span className="text-[9px] font-black text-slate-400 uppercase leading-none tracking-widest block">Weight</span>
+                  <span className="text-[11px] font-black text-slate-900 block">{row.weight}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 py-2 border-y border-slate-50">
+                <div className="text-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase block">Ghat</span>
+                  <span className="text-[10px] font-black text-amber-700">{row.ghat}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase block">Qty</span>
+                  <span className="text-[10px] font-bold text-indigo-800">{row.qty || "—"}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase block">Days</span>
+                  <span className={`text-[11px] font-black ${row.leftDays < 0 ? "text-red-600" : "text-green-600"}`}>{row.leftDays}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-slate-400 uppercase">Order Date</span>
+                  <span className="text-[10px] font-bold text-slate-500">{row.orderDate}</span>
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-[8px] font-black text-slate-400 uppercase">Expected Del.</span>
+                  <span className="text-[10px] font-bold text-slate-500">{row.expDel || "—"}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {filteredDetails.length === 0 && (
+            <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">No details found</div>
+          )}
+        </div>
       </div>
 
       {/* ── Karigar Summary Table Header & Filter ─────── */}
@@ -448,7 +557,8 @@ export const KarigarReport: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-amber-100 shadow-xl overflow-hidden">
-        <div className="overflow-x-auto custom-scrollbar">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#fff7ed] text-[#9a3412] border-b border-amber-200">
@@ -475,6 +585,57 @@ export const KarigarReport: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Summary Card View */}
+        <div className="lg:hidden p-3 space-y-4 bg-slate-50/50 font-mono">
+          {filteredSummary.map((row) => (
+            <div key={row.name} className="p-4 bg-white rounded-2xl border border-blue-200 shadow-md border-l-4 border-l-blue-500 space-y-3 transition-transform active:scale-[0.98]">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] font-black text-[#9a3412] uppercase tracking-wider">{row.name}</span>
+                <span className="text-[11px] font-bold text-orange-600">Late: {row.latePercent}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 py-2 bg-slate-50/50 rounded-xl px-3 border border-slate-100">
+                <div className="text-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase block">Late</span>
+                  <span className="text-[11px] font-black text-red-600">{row.late}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase block">On Time</span>
+                  <span className="text-[11px] font-black text-green-600">{row.onTime}</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[8px] font-black text-slate-400 uppercase block">Total</span>
+                  <span className="text-[11px] font-black text-slate-800">{row.total}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-slate-400 uppercase">Ghat Wt</span>
+                  <span className="text-[10px] font-bold text-slate-700">{row.ghatWeight}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-slate-400 uppercase">Total Wt</span>
+                  <span className="text-[10px] font-bold text-slate-700">{row.totalWeight}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Cust Wt</span>
+                  <span className="text-[10px] font-bold text-slate-700">{row.custWeight}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black text-slate-400 uppercase">Balance</span>
+                  <span className="text-[10px] font-bold text-slate-600">{row.balance}</span>
+                </div>
+              </div>
+              <div className="pt-2 flex items-center justify-between border-t border-slate-50 border-dashed">
+                <span className="text-[9px] font-black text-slate-400 uppercase">Metal Issue</span>
+                <span className="text-[11px] font-black text-amber-700">{row.metalIssue}</span>
+              </div>
+            </div>
+          ))}
+          {filteredSummary.length === 0 && (
+            <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">No summary data found</div>
+          )}
         </div>
       </div>
     </div>

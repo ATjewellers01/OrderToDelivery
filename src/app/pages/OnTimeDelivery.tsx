@@ -75,6 +75,50 @@ const TABLE_COL_HEADERS = [
 export const OnTimeDelivery: React.FC = () => {
   const [search, setSearch] = useState("");
 
+  const handleExportExcel = () => {
+    // 1. Prepare Detailed Report
+    const deliveryRows = deliveryData.map(r => [
+      r.orderNo, r.delay, r.karigarDelay, r.expDelDate, r.isLate,
+      r.type, r.stockInDate, r.stockDays, r.prodTime, r.metalIssue,
+      r.flwUp, r.qc1, r.meenaIn, r.meenaOut, r.polishIn,
+      r.polishOut, r.qc2, r.qc3, r.rd, r.huid,
+      r.kStatus, r.readyDispatch, r.stockIn, r.delivery, r.ghatWt,
+      r.kLateStatus, r.finishTime, r.banglePolish, r.stage, r.client,
+      r.category, r.melting, r.weight, r.totalWt, r.qty,
+      r.karigar, r.orderDate, r.delDate, r.kDate
+    ]);
+
+    // 2. Prepare Efficiency Ranking
+    const efficiencyHeaders = ["Karigar", "Late", "On Time", "Total", "Late %", "Avg time"];
+    const efficiencyRows = karigarSummary.map(r => [
+      r.name, r.late, r.onTime, r.total, r.latePct, r.avgTime
+    ]);
+
+    // 3. Combine into CSV
+    let csvContent = "ON-TIME DELIVERY DETAILED REPORT\n";
+    csvContent += TABLE_COL_HEADERS.join(",") + "\n";
+    deliveryRows.forEach(row => {
+      csvContent += row.map(val => `"${val || ""}"`).join(",") + "\n";
+    });
+
+    csvContent += "\n\nKARIGAR EFFICIENCY RANKING\n";
+    csvContent += efficiencyHeaders.join(",") + "\n";
+    efficiencyRows.forEach(row => {
+      csvContent += row.map(val => `"${val || ""}"`).join(",") + "\n";
+    });
+
+    // 4. Trigger Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `OnTime_Delivery_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-transparent space-y-4 pt-1">
       {/* ── Top Section: Filters + Insights ───────────────── */}
@@ -155,9 +199,9 @@ export const OnTimeDelivery: React.FC = () => {
         {/* Right: Insights Panel */}
         <div className="space-y-6">
           {/* Charts Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[260px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:h-[280px]">
             {/* Order Type Chart */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex flex-col min-h-0 h-full overflow-hidden">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex flex-col min-h-[280px] md:min-h-0 md:h-full overflow-hidden">
               <div className="flex items-center gap-2 mb-2 px-1">
                 <div className="w-1 h-3 bg-amber-500 rounded-full" />
                 <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Order Portfolio</h4>
@@ -165,7 +209,16 @@ export const OnTimeDelivery: React.FC = () => {
               <div className="flex-1 min-h-0 relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={orderTypeData} cx="50%" cy="45%" innerRadius={42} outerRadius={65} paddingAngle={4} dataKey="value" stroke="none">
+                    <Pie 
+                      data={orderTypeData} 
+                      cx="50%" 
+                      cy="40%" 
+                      innerRadius={window.innerWidth < 768 ? 35 : 42} 
+                      outerRadius={window.innerWidth < 768 ? 55 : 65} 
+                      paddingAngle={4} 
+                      dataKey="value" 
+                      stroke="none"
+                    >
                       {orderTypeData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
                     <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '10px' }} />
@@ -176,17 +229,26 @@ export const OnTimeDelivery: React.FC = () => {
             </div>
 
             {/* Order Stage Chart */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex flex-col min-h-0 h-full overflow-hidden">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex flex-col min-h-[300px] md:min-h-0 md:h-full overflow-hidden">
               <div className="flex items-center gap-2 mb-2 px-1">
                 <div className="w-1 h-3 bg-amber-500 rounded-full" />
                 <h4 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Production Stages</h4>
               </div>
-              <div className="flex-1 flex min-h-0">
+              <div className="flex-1 flex flex-col md:flex-row min-h-0">
                 {/* Visual Chart */}
-                <div className="w-[55%] h-full relative">
+                <div className="w-full md:w-[55%] h-[180px] md:h-full relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={orderStageData} cx="50%" cy="50%" innerRadius={42} outerRadius={65} paddingAngle={2} dataKey="value" stroke="none">
+                      <Pie 
+                        data={orderStageData} 
+                        cx="50%" 
+                        cy="45%" 
+                        innerRadius={window.innerWidth < 768 ? 40 : 42} 
+                        outerRadius={window.innerWidth < 768 ? 60 : 65} 
+                        paddingAngle={2} 
+                        dataKey="value" 
+                        stroke="none"
+                      >
                         {orderStageData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Pie>
                       <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '9px' }} />
@@ -194,7 +256,7 @@ export const OnTimeDelivery: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
                 {/* Scrollable List */}
-                <div className="w-[45%] h-full overflow-y-auto custom-scrollbar pl-2 py-1">
+                <div className="w-full md:w-[45%] h-[120px] md:h-full overflow-y-auto custom-scrollbar md:pl-2 py-1 border-t md:border-t-0 md:border-l border-slate-50 mt-2 md:mt-0">
                   <div className="space-y-1.5 flex flex-col">
                     {orderStageData.map((entry, index) => (
                       <div key={index} className="flex items-start gap-1.5 group">
@@ -225,7 +287,8 @@ export const OnTimeDelivery: React.FC = () => {
               </div>
             </div>
             <div className="flex-1 overflow-auto">
-              <table className="w-full text-left border-collapse">
+              {/* Desktop View */}
+              <table className="hidden lg:table w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#fff7ed] text-[#9a3412] border-b border-amber-200">
                     <th className="px-6 py-2.5 text-[9px] font-black uppercase tracking-widest border-r border-amber-100/50">Karigar</th>
@@ -249,6 +312,32 @@ export const OnTimeDelivery: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+
+              {/* Mobile Card View */}
+              <div className="lg:hidden p-4 space-y-4 bg-slate-50/30">
+                {karigarSummary.map((row) => (
+                  <div key={row.name} className="bg-white p-4 rounded-2xl border border-blue-100 shadow-sm border-l-4 border-l-blue-500 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] font-black text-[#9a3412] uppercase">{row.name}</span>
+                      <span className="text-[10px] font-black text-blue-600 uppercase">Avg: {row.avgTime}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center bg-red-50 p-2 rounded-xl border border-red-100">
+                        <span className="text-[8px] font-black text-red-400 uppercase block">Late</span>
+                        <span className="text-[11px] font-black text-red-600">{row.late}</span>
+                      </div>
+                      <div className="text-center bg-green-50 p-2 rounded-xl border border-green-100">
+                        <span className="text-[8px] font-black text-green-400 uppercase block">On Time</span>
+                        <span className="text-[11px] font-black text-green-700">{row.onTime}</span>
+                      </div>
+                      <div className="text-center bg-slate-50 p-2 rounded-xl border border-slate-200">
+                        <span className="text-[8px] font-black text-slate-400 uppercase block">Total</span>
+                        <span className="text-[11px] font-black text-slate-800">{row.total}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -270,7 +359,10 @@ export const OnTimeDelivery: React.FC = () => {
                 <div className="text-xs font-black text-amber-700 tracking-tight">1,347 Entries</div>
               </div>
             </div>
-            <button className="flex items-center gap-2.5 px-7 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5 active:translate-y-0">
+            <button 
+              onClick={handleExportExcel}
+              className="flex items-center gap-2.5 px-7 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-wider shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
               <Download className="w-4 h-4" />
               Export Report
             </button>
@@ -278,7 +370,7 @@ export const OnTimeDelivery: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-xl border-t-4 border-amber-800 shadow-2xl overflow-hidden relative">
-          <div className="overflow-x-auto max-h-[60vh] custom-scrollbar">
+          <div className="hidden lg:block overflow-x-auto max-h-[60vh] custom-scrollbar">
             <table className="w-full text-left border-collapse table-auto relative">
                 <thead className="sticky top-0 z-20 transition-all">
                   <tr className="bg-slate-100 text-slate-800 uppercase tracking-widest border-b border-slate-200">
@@ -335,6 +427,62 @@ export const OnTimeDelivery: React.FC = () => {
               ))}
             </tbody>
           </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden p-4 space-y-4 bg-slate-50/50">
+            {deliveryData.map((row, idx) => (
+              <div key={idx} className="bg-white p-4 rounded-2xl border border-amber-200 shadow-md border-l-4 border-l-amber-500 space-y-3 transition-transform active:scale-[0.98]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-black text-amber-600 uppercase tracking-wider">{row.orderNo}</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider ${row.isLate === "Yes" ? "bg-red-50 text-red-600 border border-red-100" : "bg-green-50 text-green-700 border border-green-100"}`}>
+                    {row.isLate === "Yes" ? "Late" : "On Time"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-800">{row.client}</span>
+                  <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">{row.stage}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-50">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase leading-none tracking-widest block">Type</span>
+                    <span className="text-[11px] font-bold text-indigo-700 block whitespace-nowrap overflow-hidden text-ellipsis">{row.type}</span>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <span className="text-[9px] font-black text-slate-400 uppercase leading-none tracking-widest block">Exp Del</span>
+                    <span className="text-[11px] font-black text-slate-900 block">{row.expDelDate}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 py-2 bg-slate-50/50 rounded-xl px-2 border border-slate-100">
+                  <div className="text-center">
+                    <span className="text-[8px] font-black text-slate-400 uppercase block">Total Delay</span>
+                    <span className="text-[10px] font-black text-red-600">{row.delay}d</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[8px] font-black text-slate-400 uppercase block">K-Delay</span>
+                    <span className="text-[10px] font-black text-orange-600">{row.karigarDelay}d</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-[8px] font-black text-slate-400 uppercase block">Prod Time</span>
+                    <span className="text-[10px] font-black text-slate-800">{row.prodTime}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black text-slate-400 uppercase">Karigar Name</span>
+                    <span className="text-[10px] font-black text-amber-700 uppercase">{row.karigar}</span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[8px] font-black text-slate-400 uppercase">Current Wt</span>
+                    <span className="text-[10px] font-bold text-slate-900">{row.totalWt}g</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {deliveryData.length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">No detailed records found</div>
+            )}
+          </div>
         </div>
         
         <div className="p-6 bg-slate-50/50 flex items-center justify-between border-t border-slate-100">
@@ -348,6 +496,5 @@ export const OnTimeDelivery: React.FC = () => {
         </div>
         </div>
       </div>
-    </div>
   );
 };

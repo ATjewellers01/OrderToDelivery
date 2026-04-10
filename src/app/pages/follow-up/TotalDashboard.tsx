@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Search, Filter, RotateCcw, LayoutGrid, List, ChevronRight, Clock, User, Package, Hash, Activity, FileText, CheckCircle, X, TrendingUp, Users } from "lucide-react";
 
 // Dummy data for Total dashboard
-const totalDummyData = [
+const initialDummyData = [
   { 
     id: "1", 
     callingDate: "31-12-2025", 
@@ -60,6 +60,14 @@ const TABLE_HEADERS = [
 ];
 
 export const TotalDashboard: React.FC = () => {
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem('totalDashboardData');
+    return saved ? JSON.parse(saved) : initialDummyData;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('totalDashboardData', JSON.stringify(data));
+  }, [data]);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [updateStatus, setUpdateStatus] = useState("");
@@ -276,7 +284,7 @@ export const TotalDashboard: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {totalDummyData.map((row, idx) => (
+                        {data.map((row: any, idx: number) => (
                             <tr key={row.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-slate-50/30"} hover:bg-amber-50 transition-colors group cursor-default shadow-sm`}>
                                 <td className="px-6 py-4 whitespace-nowrap text-center border-r border-slate-100 sticky left-0 bg-inherit z-10" style={{ left: 0 }}>
                                     <button 
@@ -321,7 +329,7 @@ export const TotalDashboard: React.FC = () => {
 
         {/* Mobile Grid View */}
         <div className="lg:hidden grid grid-cols-1 md:grid-cols-2 gap-4 px-2">
-            {totalDummyData.map(row => (
+            {data.map((row: any) => (
                 <div key={row.id} className="bg-white rounded-3xl border border-gray-100 p-5 shadow-lg border-b-4 border-b-amber-500">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex flex-col">
@@ -449,8 +457,12 @@ export const TotalDashboard: React.FC = () => {
                 </button>
                 <button 
                     onClick={() => {
-                    console.log("Submitting:", { id: selectedOrder.id, updateStatus, updateRemarks });
-                    setIsUpdateModalOpen(false);
+                        setData((prev: any) => prev.map((item: any) => 
+                            item.id === selectedOrder.id 
+                            ? { ...item, stage: updateStatus || item.stage, remarks: updateRemarks || item.remarks } 
+                            : item
+                        ));
+                        setIsUpdateModalOpen(false);
                     }}
                     className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-95"
                 >

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Filter, RotateCcw, Download, History, Send, 
   ChevronDown, Calendar, Users, Zap, Hash, MessageSquare,
@@ -20,6 +20,24 @@ const MOCK_HISTORY_DATA = [
 
 export const PolishDetails: React.FC = () => {
   // ── States ───────────────────────────────────────────
+  const [liveData, setLiveData] = useState(() => {
+    const saved = localStorage.getItem('polishLiveData');
+    return saved ? JSON.parse(saved) : MOCK_POLISH_DATA;
+  });
+
+  const [historyData, setHistoryData] = useState(() => {
+    const saved = localStorage.getItem('polishHistoryData');
+    return saved ? JSON.parse(saved) : MOCK_HISTORY_DATA;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('polishLiveData', JSON.stringify(liveData));
+  }, [liveData]);
+
+  useEffect(() => {
+    localStorage.setItem('polishHistoryData', JSON.stringify(historyData));
+  }, [historyData]);
+
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +51,7 @@ export const PolishDetails: React.FC = () => {
 
   // ── Filtering Logic ──────────────────────────────────
   const filteredData = useMemo(() => {
-    return MOCK_POLISH_DATA.filter(row => {
+    return liveData.filter((row: any) => {
       const typeMatch = selectedType === "All" || row.type === selectedType;
       const karigarMatch = selectedKarigar === "All" || row.karigar === selectedKarigar;
       const searchMatch = !searchQuery || 
@@ -42,21 +60,21 @@ export const PolishDetails: React.FC = () => {
         (row.serialNo && row.serialNo.toLowerCase().includes(searchQuery.toLowerCase()));
       return typeMatch && karigarMatch && searchMatch;
     });
-  }, [selectedType, selectedKarigar, searchQuery]);
+  }, [selectedType, selectedKarigar, searchQuery, liveData]);
 
   const filteredHistory = useMemo(() => {
-    return MOCK_HISTORY_DATA.filter(row => {
+    return historyData.filter((row: any) => {
         const searchMatch = !historySearchQuery || 
             row.orderNo.toLowerCase().includes(historySearchQuery.toLowerCase()) || 
             row.karigar.toLowerCase().includes(historySearchQuery.toLowerCase());
         return searchMatch;
     });
-  }, [historySearchQuery]);
+  }, [historySearchQuery, historyData]);
 
   // ── Stats Calculations ──────────────────────────────
   const activeStats = useMemo(() => {
     const data = isHistoryOpen ? filteredHistory : filteredData;
-    return data.reduce((acc, row) => ({
+    return data.reduce((acc: any, row: any) => ({
       finish: acc.finish + (row.finishWeight || 0),
       loss: acc.loss + (row.polishLoss || 0),
       ghat: acc.ghat + (row.ghatWeight || 0),
@@ -67,7 +85,7 @@ export const PolishDetails: React.FC = () => {
 
   // ── Handlers ────────────────────────────────────────
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) setSelectedRows(filteredData.map(r => r.id));
+    if (e.target.checked) setSelectedRows(filteredData.map((r: any) => r.id));
     else setSelectedRows([]);
   };
 
@@ -78,6 +96,21 @@ export const PolishDetails: React.FC = () => {
   const handleReset = () => {
     setFromDate(""); setToDate(""); setSearchQuery("");
     setSelectedType("All"); setSelectedKarigar("All");
+  };
+
+  const handleSubmitResults = () => {
+    const selectedItems = liveData.filter((r: any) => selectedRows.includes(r.id));
+    const now = new Date();
+    const doneDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    
+    const processedItems = selectedItems.map((r: any) => ({
+      ...r,
+      doneDate
+    }));
+
+    setHistoryData((prev: any) => [...processedItems, ...prev]);
+    setLiveData((prev: any) => prev.filter((r: any) => !selectedRows.includes(r.id)));
+    setSelectedRows([]);
   };
 
   return (
@@ -179,12 +212,13 @@ export const PolishDetails: React.FC = () => {
                 </button>
              )}
 
-             <button 
+              <button 
+                onClick={handleSubmitResults}
                 className={`flex items-center gap-1.5 px-4 py-2 bg-[#9a3412] text-white rounded-lg text-[11px] font-black uppercase transition-all hover:bg-amber-800 disabled:opacity-30 disabled:cursor-not-allowed`} 
                 disabled={isHistoryOpen || selectedRows.length === 0}
-             >
+              >
                 <Send className="w-3.5 h-3.5" /> Submit Results
-             </button>
+              </button>
           </div>
       </div>
 
@@ -214,7 +248,7 @@ export const PolishDetails: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(isHistoryOpen ? filteredHistory : filteredData).map((row, idx) => (
+              {(isHistoryOpen ? filteredHistory : filteredData).map((row: any, idx: number) => (
                 <tr key={row.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-slate-50/30"} hover:bg-amber-50 transition-colors`}>
                   {!isHistoryOpen && (
                     <td className="px-6 py-3.5 text-center border-r border-slate-100 sticky left-0 bg-inherit z-10">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Filter, RotateCcw, Download, History, Send, 
   ChevronDown, Calendar, Users, Zap, Hash, MessageSquare,
@@ -26,6 +26,24 @@ const MOCK_HISTORY_DATA = [
 
 export const MeenaDetails: React.FC = () => {
   // ── States ───────────────────────────────────────────
+  const [liveData, setLiveData] = useState(() => {
+    const saved = localStorage.getItem('meenaLiveData');
+    return saved ? JSON.parse(saved) : MOCK_MEENA_DATA;
+  });
+
+  const [historyData, setHistoryData] = useState(() => {
+    const saved = localStorage.getItem('meenaHistoryData');
+    return saved ? JSON.parse(saved) : MOCK_HISTORY_DATA;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('meenaLiveData', JSON.stringify(liveData));
+  }, [liveData]);
+
+  useEffect(() => {
+    localStorage.setItem('meenaHistoryData', JSON.stringify(historyData));
+  }, [historyData]);
+
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -42,7 +60,7 @@ export const MeenaDetails: React.FC = () => {
 
   // ── Filtering Logic ──────────────────────────────────
   const filteredData = useMemo(() => {
-    return MOCK_MEENA_DATA.filter(row => {
+    return liveData.filter((row: any) => {
       const typeMatch = selectedType === "All" || row.type === selectedType;
       const karigarMatch = selectedKarigar === "All" || row.karigar === selectedKarigar;
       const meltingMatch = selectedMelting === "All" || row.melting === selectedMelting;
@@ -53,11 +71,11 @@ export const MeenaDetails: React.FC = () => {
       
       return typeMatch && karigarMatch && meltingMatch && searchMatch;
     });
-  }, [selectedType, selectedKarigar, selectedMelting, searchQuery]);
+  }, [selectedType, selectedKarigar, selectedMelting, searchQuery, liveData]);
 
   // ── Stats Calculations ──────────────────────────────
   const stats = useMemo(() => {
-    return filteredData.reduce((acc, current) => ({
+    return filteredData.reduce((acc: any, current: any) => ({
       chillai: acc.chillai + current.chillaiWeight,
       received: acc.received + current.meenaReceived,
       ghat: acc.ghat + current.ghatWeight,
@@ -66,16 +84,16 @@ export const MeenaDetails: React.FC = () => {
   }, [filteredData]);
 
   const filteredHistory = useMemo(() => {
-    return MOCK_HISTORY_DATA.filter(row => {
+    return historyData.filter((row: any) => {
         const searchMatch = !historySearchQuery || 
             row.orderNo.toLowerCase().includes(historySearchQuery.toLowerCase()) || 
             row.karigar.toLowerCase().includes(historySearchQuery.toLowerCase());
         return searchMatch;
     });
-  }, [historySearchQuery]);
+  }, [historySearchQuery, historyData]);
 
   const historyStats = useMemo(() => {
-      return filteredHistory.reduce((acc, current) => ({
+      return filteredHistory.reduce((acc: any, current: any) => ({
           chillai: acc.chillai + current.chillaiWeight,
           received: acc.received + current.meenaReceived,
           ghat: acc.ghat + current.ghatWeight,
@@ -85,7 +103,7 @@ export const MeenaDetails: React.FC = () => {
 
   // ── Handlers ────────────────────────────────────────
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) setSelectedRows(filteredData.map(r => r.id));
+    if (e.target.checked) setSelectedRows(filteredData.map((r: any) => r.id));
     else setSelectedRows([]);
   };
 
@@ -100,6 +118,21 @@ export const MeenaDetails: React.FC = () => {
 
   const handleResetHistory = () => {
       setHistoryFromDate(""); setHistoryToDate(""); setHistorySearchQuery("");
+  };
+
+  const handleSubmitResults = () => {
+    const selectedItems = liveData.filter((r: any) => selectedRows.includes(r.id));
+    const now = new Date();
+    const doneDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    
+    const processedItems = selectedItems.map((r: any) => ({
+      ...r,
+      doneDate
+    }));
+
+    setHistoryData((prev: any) => [...processedItems, ...prev]);
+    setLiveData((prev: any) => prev.filter((r: any) => !selectedRows.includes(r.id)));
+    setSelectedRows([]);
   };
 
   return (
@@ -187,7 +220,7 @@ export const MeenaDetails: React.FC = () => {
                 </select>
                 <select className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-700 outline-none hover:border-amber-400 transition-all cursor-pointer" value={selectedKarigar} onChange={e => setSelectedKarigar(e.target.value)}>
                     <option value="All">All Karigars</option>
-                    {Array.from(new Set(MOCK_MEENA_DATA.map(r => r.karigar))).map(k => <option key={k} value={k}>{k}</option>)}
+                    {Array.from(new Set(liveData.map((r: any) => r.karigar))).map((k: any) => <option key={k} value={k}>{k}</option>)}
                 </select>
               </>
           )}
@@ -214,6 +247,7 @@ export const MeenaDetails: React.FC = () => {
              )}
 
              <button 
+                onClick={handleSubmitResults}
                 className={`flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-[11px] font-bold uppercase transition-all hover:bg-amber-600 disabled:opacity-30 disabled:cursor-not-allowed`} 
                 disabled={isHistoryOpen || selectedRows.length === 0}
              >
@@ -227,10 +261,10 @@ export const MeenaDetails: React.FC = () => {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[1600px]">
             <thead>
-              <tr className="bg-slate-50/80 text-slate-900 border-b border-slate-200">
+              <tr className="bg-[#fff7ed] text-[#9a3412] border-b border-amber-200 transition-colors">
                 {!isHistoryOpen && (
-                    <th className="px-6 py-3.5 text-[10px] font-bold text-center border-r border-slate-200/60 w-12 sticky left-0 bg-slate-50">
-                        <input type="checkbox" checked={selectedRows.length === filteredData.length && filteredData.length > 0} onChange={handleSelectAll} className="w-3.5 h-3.5 rounded border-slate-300 transition-all cursor-pointer" />
+                    <th className="px-6 py-3.5 text-[10px] font-black text-center border-r border-amber-200/50 w-12 sticky left-0 bg-[#fff7ed] z-10 uppercase tracking-widest">
+                        <input type="checkbox" checked={selectedRows.length === filteredData.length && filteredData.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-amber-300 transition-all cursor-pointer accent-amber-500" />
                     </th>
                 )}
                 {[
@@ -238,15 +272,15 @@ export const MeenaDetails: React.FC = () => {
                   "Ghat", "Chillai", "Received", "Meena Wt.", 
                   "Serial", "Remarks", "Mode"
                 ].map((header, i) => (
-                  <th key={header} className={`px-6 py-3.5 text-[10px] font-bold text-center border-r border-slate-200/60 uppercase tracking-widest whitespace-nowrap ${(i === 3 && !isHistoryOpen) ? "sticky left-12 bg-slate-50" : ""}`}>
+                  <th key={header} className={`px-6 py-3.5 text-[10px] font-black text-center border-r ${isHistoryOpen ? "border-indigo-100/50" : "border-amber-100/50"} uppercase tracking-widest whitespace-nowrap ${(i === 3 && !isHistoryOpen) ? "sticky left-12 bg-[#fff7ed] z-10" : ""}`}>
                     {header}
                   </th>
                 ))}
-                {isHistoryOpen && <th className="px-6 py-3.5 text-[10px] font-bold text-center uppercase tracking-widest whitespace-nowrap bg-indigo-50/50 text-indigo-700">Done Date</th>}
+                {isHistoryOpen && <th className="px-6 py-3.5 text-[10px] font-black text-center uppercase tracking-widest whitespace-nowrap bg-amber-50 text-amber-700">Done Date</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(isHistoryOpen ? filteredHistory : filteredData).map((row, idx) => (
+              {(isHistoryOpen ? filteredHistory : filteredData).map((row: any, idx: number) => (
                 <tr key={row.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-slate-50/30"} hover:bg-slate-50 transition-colors`}>
                   {!isHistoryOpen && (
                     <td className="px-6 py-3.5 text-center border-r border-slate-100 sticky left-0 bg-inherit shadow-[1px_0_0_rgb(226,232,240)]">

@@ -1,15 +1,24 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Search, Filter, RotateCcw, LayoutGrid, List, ChevronRight, Clock, User, Package, Hash, Activity, FileText, CheckCircle, X } from "lucide-react";
 
 // Dummy data for Today dashboard
-const todayDummyData = [
-  { id: "1", action: "Update", callingDate: "17-02-2026", nextDateOfCall: "18-01-1900", orderNumber: "JF-12954", customerName: "CaratLane Jewellers", categoryName: "BANGLES", melting: "75", weight: "11.52gm - 11.52gm", stage: "First Flw-Up Pending", status: "Metal Issue", karigar: "RK PINTU" },
-  { id: "2", action: "Update", callingDate: "16-02-2026", nextDateOfCall: "18-01-1900", orderNumber: "JF-12944", customerName: "CaratLane Jewellers", categoryName: "BANGLES", melting: "75", weight: "11.520gm - 11.52gm", stage: "First Flw-Up Pending", status: "Fle-Up", karigar: "SP" },
-  { id: "3", action: "Update", callingDate: "18-02-2026", nextDateOfCall: "18-01-1900", orderNumber: "JF-12980", customerName: "MOTI JEWELLERS", categoryName: "4 PCS BANGLES", melting: "92", weight: "48gm - 48gm", stage: "Chaf Fle-up", status: "Ready", karigar: "SKS" },
-  { id: "4", action: "Update", callingDate: "18-02-2026", nextDateOfCall: "06-01-1900", orderNumber: "JF-12979", customerName: "MOTI JEWELLERS", categoryName: "2 PCS BANGLES", melting: "92", weight: "35gm - 35gm", stage: "Ghat Flw-up", status: "Metal Issue", karigar: "SKA" },
+const initialDummyData = [
+  { id: "1", action: "Update", callingDate: "17-02-2026", nextDateOfCall: "18-01-1900", orderNumber: "JF-12954", customerName: "CaratLane Jewellers", categoryName: "BANGLES", melting: "75", weight: "11.52gm - 11.52gm", stage: "First Flw-Up Pending", status: "Metal Issue", karigar: "RK PINTU", remarks: "-" },
+  { id: "2", action: "Update", callingDate: "16-02-2026", nextDateOfCall: "18-01-1900", orderNumber: "JF-12944", customerName: "CaratLane Jewellers", categoryName: "BANGLES", melting: "75", weight: "11.520gm - 11.52gm", stage: "First Flw-Up Pending", status: "Fle-Up", karigar: "SP", remarks: "-" },
+  { id: "3", action: "Update", callingDate: "18-02-2026", nextDateOfCall: "18-01-1900", orderNumber: "JF-12980", customerName: "MOTI JEWELLERS", categoryName: "4 PCS BANGLES", melting: "92", weight: "48gm - 48gm", stage: "Chaf Fle-up", status: "Ready", karigar: "SKS", remarks: "-" },
+  { id: "4", action: "Update", callingDate: "18-02-2026", nextDateOfCall: "06-01-1900", orderNumber: "JF-12979", customerName: "MOTI JEWELLERS", categoryName: "2 PCS BANGLES", melting: "92", weight: "35gm - 35gm", stage: "Ghat Flw-up", status: "Metal Issue", karigar: "SKA", remarks: "-" },
 ];
 
 export const TodayDashboard: React.FC = () => {
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem('todayDashboardData');
+    return saved ? JSON.parse(saved) : initialDummyData;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('todayDashboardData', JSON.stringify(data));
+  }, [data]);
+
   const [hoveredSegment, setHoveredSegment] = useState<{
     chartId: string,
     label: string,
@@ -43,13 +52,13 @@ export const TodayDashboard: React.FC = () => {
   };
 
   const filteredData = useMemo(() => {
-    return todayDummyData.filter(item => {
+    return data.filter((item: any) => {
       return (
         (!filters.orderNumber || item.orderNumber.includes(filters.orderNumber)) &&
         (!filters.customerName || item.customerName.toLowerCase().includes(filters.customerName.toLowerCase()))
       );
     });
-  }, [filters]);
+  }, [filters, data]);
 
   return (
     <div className="space-y-6">
@@ -299,7 +308,7 @@ export const TodayDashboard: React.FC = () => {
                     <td className="px-6 py-4 text-[11px] font-bold text-purple-700 border-r border-gray-100/50 text-center">Pending</td>
                     <td className="px-6 py-4 text-[11px] font-bold text-green-700 border-r border-gray-100/50 text-center">In Progress</td>
                     <td className="px-6 py-4 text-[11px] font-bold text-blue-700 border-r border-gray-100/50 text-center">Regular</td>
-                    <td className="px-6 py-4 text-[11px] font-bold text-gray-500 border-r border-gray-100/50 text-center">-</td>
+                    <td className="px-6 py-4 text-[11px] font-bold text-gray-500 border-r border-gray-100/50 text-center">{row.remarks || "-"}</td>
                     <td className="px-6 py-4 text-[11px] font-black text-amber-900 group-hover:text-amber-600 transition-colors uppercase tracking-tight text-center">{row.stage}</td>
                   </tr>
                 ))}
@@ -445,8 +454,12 @@ export const TodayDashboard: React.FC = () => {
                 </button>
                 <button 
                     onClick={() => {
-                    console.log("Submitting:", { id: selectedOrder.id, updateStatus, updateRemarks });
-                    setIsUpdateModalOpen(false);
+                        setData((prev: any) => prev.map((item: any) => 
+                            item.id === selectedOrder.id 
+                            ? { ...item, stage: updateStatus || item.stage, remarks: updateRemarks || item.remarks } 
+                            : item
+                        ));
+                        setIsUpdateModalOpen(false);
                     }}
                     className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-amber-200 transition-all active:scale-95"
                 >

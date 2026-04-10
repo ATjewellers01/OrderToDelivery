@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Search, Filter, RotateCcw, Download, Send, 
   Calendar, Truck, BarChart3, PackageCheck, ClipboardCheck
@@ -24,13 +24,22 @@ const MOCK_DISPATCH_DATA = [
 
 export const ReadyForDispatch: React.FC = () => {
   // ── States ───────────────────────────────────────────
+  const [data, setData] = useState(() => {
+    const saved = localStorage.getItem('readyForDispatchData');
+    return saved ? JSON.parse(saved) : MOCK_DISPATCH_DATA;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('readyForDispatchData', JSON.stringify(data));
+  }, [data]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
   // ── Filtering Logic ──────────────────────────────────
   const filteredData = useMemo(() => {
-    return MOCK_DISPATCH_DATA.filter(row => {
+    return data.filter((row: any) => {
       const searchMatch = !searchQuery || 
         row.orderNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
         row.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -38,23 +47,28 @@ export const ReadyForDispatch: React.FC = () => {
       const categoryMatch = selectedCategory === "All" || row.category === selectedCategory;
       return searchMatch && categoryMatch;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, data]);
 
   // ── Stats Calculations ──────────────────────────────
   const stats = useMemo(() => ({
-    totalPcs: filteredData.reduce((acc, row) => acc + row.pcs, 0),
-    totalWeight: filteredData.reduce((acc, row) => acc + row.weight, 0),
+    totalPcs: filteredData.reduce((acc: number, row: any) => acc + row.pcs, 0),
+    totalWeight: filteredData.reduce((acc: number, row: any) => acc + row.weight, 0),
     activeShipments: filteredData.length
   }), [filteredData]);
 
   // ── Handlers ────────────────────────────────────────
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) setSelectedRows(filteredData.map(r => r.id));
+    if (e.target.checked) setSelectedRows(filteredData.map((r: any) => r.id));
     else setSelectedRows([]);
   };
 
   const handleSelectRow = (id: number) => {
     setSelectedRows(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleDispatch = () => {
+    setData((prev: any) => prev.filter((row: any) => !selectedRows.includes(row.id)));
+    setSelectedRows([]);
   };
 
   return (
@@ -119,6 +133,7 @@ export const ReadyForDispatch: React.FC = () => {
              </button>
              
              <button 
+                onClick={handleDispatch}
                 className={`flex items-center gap-1.5 px-6 py-2 bg-[#9a3412] text-white rounded-lg text-[11px] font-black uppercase transition-all hover:bg-amber-800 disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-amber-100`} 
                 disabled={selectedRows.length === 0}
              >
@@ -149,7 +164,7 @@ export const ReadyForDispatch: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredData.map((row, idx) => (
+              {filteredData.map((row: any, idx: number) => (
                 <tr key={row.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-slate-50/30"} hover:bg-amber-50 transition-colors`}>
                   <td className="px-6 py-4 text-center border-r border-slate-100 sticky left-0 bg-inherit z-10">
                       <input type="checkbox" checked={selectedRows.includes(row.id)} onChange={() => handleSelectRow(row.id)} className="w-4 h-4 rounded border-amber-300 cursor-pointer" />
