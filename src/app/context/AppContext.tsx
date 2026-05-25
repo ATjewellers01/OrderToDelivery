@@ -111,7 +111,29 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const STORAGE_VERSION = "3.1"; // Bumped for ConversionEntry interface change
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('erp_user');
+      if (savedUser) {
+        try {
+          return JSON.parse(savedUser);
+        } catch (e) {
+          console.error("Error parsing user from localStorage:", e);
+        }
+      }
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (user) {
+        localStorage.setItem('erp_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('erp_user');
+      }
+    }
+  }, [user]);
 
   // Hard Reset logic: clear everything if version doesn't match
   useEffect(() => {

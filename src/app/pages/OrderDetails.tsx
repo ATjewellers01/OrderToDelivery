@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { Search, Plus, FileDown } from "lucide-react";
+import { AddOrderModal } from "../components/AddOrderModal";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { PdfTemplates } from '../components/PdfTemplates';
 
 export const OrderDetails = () => {
   const [data, setData] = useState(() => {
@@ -9,11 +13,54 @@ export const OrderDetails = () => {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [karigarFilter, setKarigarFilter] = useState("All Karigars");
   const [meltingFilter, setMeltingFilter] = useState("All Meltings");
   const [typeFilter, setTypeFilter] = useState("All Types");
   const [dateFilter, setDateFilter] = useState("");
+
+  const [pdfOrder, setPdfOrder] = useState<any>(null);
+  const [pdfType, setPdfType] = useState<'karigar' | 'customer' | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const triggerPdf = (order: any, type: 'karigar' | 'customer') => {
+    if (isGeneratingPdf) return;
+    setPdfOrder(order);
+    setPdfType(type);
+  };
+
+  React.useEffect(() => {
+    if (pdfOrder && pdfType) {
+      const generatePdf = async () => {
+        setIsGeneratingPdf(true);
+        try {
+          await new Promise(resolve => setTimeout(resolve, 100)); // wait for render
+          
+          const element = document.getElementById(`pdf-template-${pdfType}`);
+          if (!element) return;
+          
+          const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+          const imgData = canvas.toDataURL('image/png');
+          
+          const pdf = new jsPDF('p', 'mm', 'a4');
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          
+          pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.save(`${pdfType}-report-${pdfOrder.orderNumber}.pdf`);
+        } catch (error) {
+          console.error("Failed to generate PDF:", error);
+        } finally {
+          setIsGeneratingPdf(false);
+          setPdfOrder(null);
+          setPdfType(null);
+        }
+      };
+      
+      generatePdf();
+    }
+  }, [pdfOrder, pdfType]);
 
 
   const categories: string[] = useMemo(() => ["All Categories", ...(Array.from(new Set(data.map((d: any) => String(d.categoryName)))) as string[])], [data]);
@@ -37,24 +84,26 @@ export const OrderDetails = () => {
   }, [data, searchTerm, categoryFilter, karigarFilter, meltingFilter, typeFilter, dateFilter]);
 
   const headers = [
-    { name: "Serial No.", stickyContext: "left-0", width: "w-[100px] min-w-[100px] max-w-[100px]" },
-    { name: "Order Number", stickyContext: "left-[100px]", width: "w-[160px] min-w-[160px] max-w-[160px]" },
-    { name: "Customer Name" },
-    { name: "Category Name" },
+    { name: "Select", stickyContext: "left-0", width: "w-[60px] min-w-[60px] max-w-[60px]" },
+    { name: "Order Number", stickyContext: "left-[60px]", width: "w-[160px] min-w-[160px] max-w-[160px]" },
+    { name: "Live Left Days" },
+    { name: "Karigar Name" },
+    { name: "Order Stage" },
     { name: "Melting" },
     { name: "Weight" },
-    { name: "Total Quantity" },
-    { name: "Karigar Name" },
+    { name: "Metal Type" },
+    { name: "Total Weight" },
+    { name: "Order Type" },
+    { name: "Customer Name" },
+    { name: "Category Name" },
     { name: "Order Date" },
     { name: "Karigar Delivery Date" },
     { name: "Delivery Date" },
     { name: "Expected Delivery Date" },
+    { name: "Total Quantity" },
     { name: "Left Days" },
-    { name: "Order Type" },
-    { name: "Order Stage" },
     { name: "Karigar Notes" },
-    { name: "Total Weight" },
-    { name: "Live Left Days" }
+    { name: "PDF DOWNLOAD", stickyContext: "right-0", width: "w-[180px] min-w-[180px] max-w-[180px]" }
   ];
 
   return (
@@ -118,10 +167,15 @@ export const OrderDetails = () => {
             className="border border-gray-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 bg-white shadow-sm cursor-pointer text-sm flex-shrink-0"
           />
 
-          {/* Desktop Item Count */}
-          <div className="hidden lg:flex items-center justify-center bg-amber-50 text-amber-700 font-semibold px-4 py-2 rounded-xl border border-amber-200 text-sm whitespace-nowrap flex-shrink-0">
-            {filteredData.length} records
-          </div>
+
+
+          <button
+            onClick={() => setIsAddOrderOpen(true)}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm whitespace-nowrap flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Add Order
+          </button>
         </div>
       </div>
 
@@ -152,26 +206,23 @@ export const OrderDetails = () => {
                   filteredData.map((row: any) => (
                     <tr key={row.serialNo} className="hover:bg-amber-50/60 transition-colors group">
                       <td
-                        className="px-5 py-3 whitespace-nowrap text-gray-400 font-medium sticky left-0 bg-white group-hover:bg-[#fffcf5] z-20 w-[100px] min-w-[100px] max-w-[100px]"
+                        className="px-5 py-3 whitespace-nowrap text-center sticky left-0 bg-white group-hover:bg-[#fffcf5] z-20 w-[60px] min-w-[60px] max-w-[60px]"
                         style={{ boxShadow: "2px 0 5px -2px rgba(0,0,0,0.1)" }}
                       >
-                        {row.serialNo}
+                        <input type="checkbox" className="w-4 h-4 text-amber-600 rounded border-gray-300 focus:ring-amber-500 cursor-pointer" />
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap font-bold text-amber-700 sticky left-[100px] bg-white group-hover:bg-[#fffcf5] z-20 w-[160px] min-w-[160px] max-w-[160px]" style={{ boxShadow: "2px 0 5px -2px rgba(0,0,0,0.1)" }}>
+                      <td className="px-5 py-3 whitespace-nowrap font-bold text-amber-700 sticky left-[60px] bg-white group-hover:bg-[#fffcf5] z-20 w-[160px] min-w-[160px] max-w-[160px]" style={{ boxShadow: "2px 0 5px -2px rgba(0,0,0,0.1)" }}>
                         {row.orderNumber}
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap font-medium text-gray-900">{row.customerName}</td>
-                      <td className="px-5 py-3 whitespace-nowrap"><span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold">{row.categoryName}</span></td>
-                      <td className="px-5 py-3 whitespace-nowrap font-mono">{row.melting}</td>
-                      <td className="px-5 py-3 whitespace-nowrap font-mono text-gray-600">{row.weight}</td>
-                      <td className="px-5 py-3 whitespace-nowrap text-center font-semibold bg-gray-50/50 group-hover:bg-transparent">{row.totalQuantity}</td>
+                      <td className="px-5 py-3 whitespace-nowrap text-center">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${Number(row.liveLeftDays) < 0 ? "bg-red-100 text-red-700" :
+                            Number(row.liveLeftDays) <= 3 ? "bg-orange-100 text-orange-700" :
+                              "bg-green-100 text-green-700"
+                          }`}>
+                          {row.liveLeftDays}
+                        </span>
+                      </td>
                       <td className="px-5 py-3 whitespace-nowrap">{row.karigarName}</td>
-                      <td className="px-5 py-3 whitespace-nowrap text-gray-500">{row.orderDate}</td>
-                      <td className="px-5 py-3 whitespace-nowrap text-gray-500">{row.karigarDeliveryDate}</td>
-                      <td className="px-5 py-3 whitespace-nowrap">{row.deliveryDate || "-"}</td>
-                      <td className="px-5 py-3 whitespace-nowrap border-l border-gray-50 bg-gray-50/30 group-hover:bg-transparent">{row.expectedDeliveryDate}</td>
-                      <td className="px-5 py-3 whitespace-nowrap">{row.leftDays}</td>
-                      <td className="px-5 py-3 whitespace-nowrap">{row.orderType}</td>
                       <td className="px-5 py-3 whitespace-nowrap">
                         <span className={`px-2 py-1 rounded-md text-xs font-bold ${row.orderStage === 'Delivered' ? 'bg-green-100 text-green-700' :
                             row.orderStage === 'QC' ? 'bg-blue-100 text-blue-700' :
@@ -180,15 +231,31 @@ export const OrderDetails = () => {
                           {row.orderStage}
                         </span>
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap max-w-[200px] truncate" title={row.karigarNotes}>{row.karigarNotes}</td>
+                      <td className="px-5 py-3 whitespace-nowrap font-mono">{row.melting}</td>
+                      <td className="px-5 py-3 whitespace-nowrap font-mono text-gray-600">{row.weight}</td>
+                      <td className="px-5 py-3 whitespace-nowrap font-medium text-gray-700">{row.metalType || "-"}</td>
                       <td className="px-5 py-3 whitespace-nowrap font-mono font-bold">{row.totalWeight}</td>
-                      <td className="px-5 py-3 whitespace-nowrap text-center">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${Number(row.liveLeftDays) < 0 ? "bg-red-100 text-red-700" :
-                            Number(row.liveLeftDays) <= 3 ? "bg-orange-100 text-orange-700" :
-                              "bg-green-100 text-green-700"
-                          }`}>
-                          {row.liveLeftDays}
-                        </span>
+                      <td className="px-5 py-3 whitespace-nowrap">{row.orderType}</td>
+                      <td className="px-5 py-3 whitespace-nowrap font-medium text-gray-900">{row.customerName}</td>
+                      <td className="px-5 py-3 whitespace-nowrap"><span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold">{row.categoryName}</span></td>
+                      <td className="px-5 py-3 whitespace-nowrap text-gray-500">{row.orderDate}</td>
+                      <td className="px-5 py-3 whitespace-nowrap text-gray-500">{row.karigarDeliveryDate}</td>
+                      <td className="px-5 py-3 whitespace-nowrap">{row.deliveryDate || "-"}</td>
+                      <td className="px-5 py-3 whitespace-nowrap border-l border-gray-50 bg-gray-50/30 group-hover:bg-transparent">{row.expectedDeliveryDate}</td>
+                      <td className="px-5 py-3 whitespace-nowrap text-center font-semibold bg-gray-50/50 group-hover:bg-transparent">{row.totalQuantity}</td>
+                      <td className="px-5 py-3 whitespace-nowrap">{row.leftDays}</td>
+                      <td className="px-5 py-3 whitespace-nowrap max-w-[200px] truncate" title={row.karigarNotes}>{row.karigarNotes}</td>
+                      <td className="px-5 py-3 whitespace-nowrap sticky right-0 bg-white group-hover:bg-[#fffcf5] z-20 w-[180px] min-w-[180px] max-w-[180px]" style={{ boxShadow: "-2px 0 5px -2px rgba(0,0,0,0.1)" }}>
+                        <div className="flex gap-2 justify-center">
+                          <button onClick={() => triggerPdf(row, 'karigar')} disabled={isGeneratingPdf} className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors border border-blue-200 disabled:opacity-50">
+                            <FileDown className="w-3.5 h-3.5" />
+                            Karigar
+                          </button>
+                          <button onClick={() => triggerPdf(row, 'customer')} disabled={isGeneratingPdf} className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-bold bg-purple-50 text-purple-600 rounded-md hover:bg-purple-100 transition-colors border border-purple-200 disabled:opacity-50">
+                            <FileDown className="w-3.5 h-3.5" />
+                            Customer
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -310,6 +377,19 @@ export const OrderDetails = () => {
           background: #94a3b8; 
         }
       `}</style>
+      
+      <AddOrderModal
+        isOpen={isAddOrderOpen}
+        onClose={() => setIsAddOrderOpen(false)}
+        onSave={(data) => {
+          console.log("New order saved:", data);
+        }}
+      />
+      
+      {/* Hidden PDF Templates */}
+      {pdfOrder && pdfType && (
+        <PdfTemplates order={pdfOrder} id={`pdf-template-${pdfType}`} type={pdfType} />
+      )}
     </div>
   );
 };
